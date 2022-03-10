@@ -16,17 +16,26 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
   const chainId = await getChainId();
+  // const koyweToken = await ethers.getContract("KoyweToken", deployer);
 
-  await deploy("YourContract", {
+  await deploy("KoyweCollectibles", {
     // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
     from: deployer,
-    // args: [ "Hello", ethers.utils.parseEther("1.5") ],
+    args: [ "0x2F800Db0fdb5223b3C3f354886d907A671414A7F"], // change the address to point to a different address or modify the contract to not require an ERC20 payment
     log: true,
     waitConfirmations: 5,
   });
 
+  
+
   // Getting a previously deployed contract
-  const YourContract = await ethers.getContract("YourContract", deployer);
+  const KoyweCollectibles = await ethers.getContract("KoyweCollectibles", deployer);
+
+  // console.log("\n 🤹  Sending ownership to frontend address...\n")
+  // const ownershipTransaction = await KoyweCollectibles.transferOwnership("0x40f9bf922c23c43acdad71Ab4425280C0ffBD697" );
+  // console.log("\n    ✅ confirming...\n");
+  // const ownershipResult = await ownershipTransaction.wait();
+
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
@@ -64,16 +73,23 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
   // You can also Verify your contracts with Etherscan here...
   // You don't want to verify on localhost
-  // try {
-  //   if (chainId !== localChainId) {
+  // if (chainId !== "31337") {
+  //   try {
+  //     console.log(" 🎫 Verifing Contract on Etherscan... ");
+  //     await sleep(5000); // wait 5 seconds for deployment to propagate
   //     await run("verify:verify", {
-  //       address: YourContract.address,
-  //       contract: "contracts/YourContract.sol:YourContract",
-  //       contractArguments: [],
+  //       address: KoyweCollectibles.address,
+  //       contract: "contracts/KoyweCollectibles.sol:KoyweCollectibles",
+  //       constructorArguments: ["0x2F800Db0fdb5223b3C3f354886d907A671414A7F"],
   //     });
+  //   } catch (error) {
+  //     console.log("⚠️ Contract Verification Failed: ", error);
   //   }
-  // } catch (error) {
-  //   console.error(error);
   // }
 };
-module.exports.tags = ["YourContract"];
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+module.exports.tags = ["KoyweCollectibles"];

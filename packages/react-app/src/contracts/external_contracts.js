@@ -798,4 +798,12 @@ module.exports = {
       },
     },
   },
+  137: {
+    contracts: {
+      PBCT: {
+        address: "0x2F800Db0fdb5223b3C3f354886d907A671414A7F",
+        abi: ERC20ABI,
+      },
+    },
+  },
 };

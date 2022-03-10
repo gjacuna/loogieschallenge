@@ -1,3 +1,18 @@
+# 🌳 Koywe Trees
+Submission to the SVG NFT challenge.
+
+I didn't focus much on the art side of things, but rather the game dynamics. You can mint trees (dynamic color and leafiness) paying with BCT (base carbon tokens, from Toucan protocol). All proceeds will either plant real trees or retire the BCT's using toucan tools. The outcome is determined using the same predictable randomness from the nft's attributes.
+
+Live on Polygon now!
+Opensea: https://opensea.io/collection/koywetrees
+Polygonscan: https://polygonscan.com/address/0x852be2756564b789509f9a04a9a57322a59124c7
+
+# Noticeable differences
+> You need to pay with ERC20 tokens to be able to mint. **Be sure to update the deploy script or Collectible contract to make it work locally or on testnets**
+> Don't forget to modifiy the **KoyweTreesMint** component to point to the right ERC20 contract or disable that functionality altogether.
+
+Enjoy! And don't forget to "plant" (mint) some Koywe Trees on https://app.koywe.eco !
+
 # 🏗 Scaffold-ETH
 
 > everything you need to build on Ethereum! 🚀

@@ -1,4 +1,4 @@
-import { Button, Col, Menu, Row } from "antd";
+import { Button, Card, Col, List, Menu, Row } from "antd";
 import "antd/dist/antd.css";
 import {
   useBalance,
@@ -8,11 +8,14 @@ import {
   useOnBlock,
   useUserProviderAndSigner,
 } from "eth-hooks";
+import { useEventListener } from "eth-hooks/events/useEventListener";
 import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation } from "react-router-dom";
 import "./App.css";
 import {
+  Address,
+  AddressInput,
   Account,
   Contract,
   Faucet,
@@ -23,12 +26,13 @@ import {
   NetworkDisplay,
   FaucetHint,
   NetworkSwitch,
+  KoyweTreesMint,
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
 // contracts
 import deployedContracts from "./contracts/hardhat_contracts.json";
-import { Transactor, Web3ModalSetup } from "./helpers";
+import { Transactor, Web3ModalSetup, ipfs } from "./helpers";
 import { Home, ExampleUI, Hints, Subgraph } from "./views";
 import { useStaticJsonRPC } from "./hooks";
 
@@ -53,7 +57,7 @@ const { ethers } = require("ethers");
 */
 
 /// 📡 What chain are your contracts deployed to?
-const initialNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const initialNetwork = NETWORKS.polygon; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
@@ -166,9 +170,6 @@ function App(props) {
     "0x34aA3F359A9D614239015126635CE7732c18fDF3",
   ]);
 
-  // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
-
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
   console.log("🏷 Resolved austingriffith.eth as:",addressFromENS)
@@ -244,6 +245,59 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
+  // keep track of a variable from the contract in the local React state:
+  const balance = useContractReader(readContracts, "KoyweCollectibles", "balanceOf", [address]);
+  console.log("🤗 balance:", balance);
+
+  // 📟 Listen for broadcast events
+  const transferEvents = useEventListener(readContracts, "KoyweCollectibles", "Transfer", localProvider, 1);
+  console.log("📟 Transfer events:", transferEvents);
+
+  //
+  // 🧠 This effect will update yourCollectibles by polling when your balance changes
+  //
+  const yourBalance = balance && balance.toNumber && balance.toNumber();
+  const [yourCollectibles, setYourCollectibles] = useState();
+
+  useEffect(() => {
+    const updateYourCollectibles = async () => {
+      const collectibleUpdate = [];
+      for (let tokenIndex = 0; tokenIndex < balance; tokenIndex++) {
+        try {
+          const tokenId = await readContracts.KoyweCollectibles.tokenOfOwnerByIndex(address, tokenIndex);
+
+          const tokenURI = await readContracts.KoyweCollectibles.tokenURI(tokenId);
+          const jsonManifestString = atob(tokenURI.substring(29));
+
+          try {
+            const jsonManifest = JSON.parse(jsonManifestString);
+            console.log("jsonManifest", jsonManifest);
+            collectibleUpdate.push({ id: tokenId, uri: tokenURI, owner: address, ...jsonManifest });
+          } catch (e) {
+            console.log(e);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      setYourCollectibles(collectibleUpdate.reverse());
+    };
+    updateYourCollectibles();
+  }, [address, yourBalance]);
+
+  const [sending, setSending] = useState();
+  const [ipfsHash, setIpfsHash] = useState();
+  const [ipfsDownHash, setIpfsDownHash] = useState();
+
+  const [downloading, setDownloading] = useState();
+  const [ipfsContent, setIpfsContent] = useState();
+
+  const [transferToAddresses, setTransferToAddresses] = useState({});
+
+  const [loadedAssets, setLoadedAssets] = useState();
+
+  const galleryList = [];
+
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
@@ -263,24 +317,83 @@ function App(props) {
         <Menu.Item key="/debug">
           <Link to="/debug">Debug Contracts</Link>
         </Menu.Item>
-        <Menu.Item key="/hints">
-          <Link to="/hints">Hints</Link>
-        </Menu.Item>
-        <Menu.Item key="/exampleui">
-          <Link to="/exampleui">ExampleUI</Link>
-        </Menu.Item>
-        <Menu.Item key="/mainnetdai">
-          <Link to="/mainnetdai">Mainnet DAI</Link>
-        </Menu.Item>
-        <Menu.Item key="/subgraph">
-          <Link to="/subgraph">Subgraph</Link>
-        </Menu.Item>
       </Menu>
 
       <Switch>
         <Route exact path="/">
-          {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          <Home yourLocalBalance={yourLocalBalance} readContracts={readContracts} />
+        <h1 style={{ padding: 8, marginTop: 32 }}>Regenerative Art</h1>
+            <h2>NOW MINTING, KOYWE TREES!</h2>
+            <p>To celebrate our incoming launch with <a href="https://app.koywe.eco" target="_blank">Koywe</a>, we're issuing 255 digital trees! Payable with CARBON TOKENS (BCT)!</p>
+            <p><small>If you don't have BCT yet, go to Sushiswap Polygon!</small></p>
+            <p>These trees will live on the Polygon blockchain forever as algorithmically-generated unique SVGs. All proceeds will either go to plant trees or to retire the BCT used to pay for them.</p>
+            <p>Upon minting, you will receive a tree similar to the first ever Koywe logo and 1 of 5 possible outcomes for the BCT. Watch out for the ultra rare Chile Centro Sur planting of trees.</p>
+            <p><small>Planting of trees will be done through <a href="https://www.reforestemos.org/" target="_blank">Reforestemos</a> and BCT retiring using <a href="https://toucan.earth/" target="_blank">Toucan Protocol tools</a>.</small></p>
+          <KoyweTreesMint address={address} readContracts={readContracts} writeContracts={writeContracts} tx={tx} loadWeb3Modal={loadWeb3Modal} />
+          <div style={{ width: 820, margin: "auto", paddingBottom: 256 }}>
+            <List
+              bordered
+              dataSource={yourCollectibles}
+              renderItem={item => {
+                const id = item.id.toNumber();
+
+                console.log("IMAGE", item.image);
+
+                return (
+                  <List.Item key={id + "_" + item.uri + "_" + item.owner}>
+                    <Card
+                      title={
+                        <div>
+                          <span style={{ fontSize: 18, marginRight: 8 }}>{item.name}</span>
+                        </div>
+                      }
+                    >
+                      <a
+                        href={
+                          "https://opensea.io/assets/" +
+                          (readContracts && readContracts.YourCollectible && readContracts.YourCollectible.address) +
+                          "/" +
+                          item.id
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <img src={item.image} />
+                      </a>
+                      <div>{item.description}</div>
+                    </Card>
+
+                    <div>
+                      owner:{" "}
+                      <Address
+                        address={item.owner}
+                        ensProvider={mainnetProvider}
+                        blockExplorer={blockExplorer}
+                        fontSize={16}
+                      />
+                      <AddressInput
+                        ensProvider={mainnetProvider}
+                        placeholder="transfer to address"
+                        value={transferToAddresses[id]}
+                        onChange={newValue => {
+                          const update = {};
+                          update[id] = newValue;
+                          setTransferToAddresses({ ...transferToAddresses, ...update });
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          console.log("writeContracts", writeContracts);
+                          tx(writeContracts.KoyweCollectibles.transferFrom(address, transferToAddresses[id], id));
+                        }}
+                      >
+                        Transfer
+                      </Button>
+                    </div>
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
         </Route>
         <Route exact path="/debug">
           {/*
@@ -290,65 +403,13 @@ function App(props) {
             */}
 
           <Contract
-            name="YourContract"
+            name="KoyweCollectibles"
             price={price}
             signer={userSigner}
             provider={localProvider}
             address={address}
             blockExplorer={blockExplorer}
             contractConfig={contractConfig}
-          />
-        </Route>
-        <Route path="/hints">
-          <Hints
-            address={address}
-            yourLocalBalance={yourLocalBalance}
-            mainnetProvider={mainnetProvider}
-            price={price}
-          />
-        </Route>
-        <Route path="/exampleui">
-          <ExampleUI
-            address={address}
-            userSigner={userSigner}
-            mainnetProvider={mainnetProvider}
-            localProvider={localProvider}
-            yourLocalBalance={yourLocalBalance}
-            price={price}
-            tx={tx}
-            writeContracts={writeContracts}
-            readContracts={readContracts}
-            purpose={purpose}
-          />
-        </Route>
-        <Route path="/mainnetdai">
-          <Contract
-            name="DAI"
-            customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.DAI}
-            signer={userSigner}
-            provider={mainnetProvider}
-            address={address}
-            blockExplorer="https://etherscan.io/"
-            contractConfig={contractConfig}
-            chainId={1}
-          />
-          {/*
-            <Contract
-              name="UNI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.UNI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-            />
-            */}
-        </Route>
-        <Route path="/subgraph">
-          <Subgraph
-            subgraphUri={props.subgraphUri}
-            tx={tx}
-            writeContracts={writeContracts}
-            mainnetProvider={mainnetProvider}
           />
         </Route>
       </Switch>
